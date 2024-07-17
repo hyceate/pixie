@@ -1,0 +1,7 @@
+backend/pixie_env
+/node_modules
+
+.vscode
+
+.env
+*.local
