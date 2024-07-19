@@ -1,20 +1,25 @@
-version: "3.8"
 services:
   flask:
     build:
       context: ./backend
     ports:
-      - "5000:5000"
+      - "3000:3000"
     env_file:
-      - .env
+      - ./backend/.env
     depends_on:
       - db
+    volumes:
+      - ./backend:/app
 
   vue:
     build:
       context: ./frontend
     ports:
-      - "3000:3000"
+      - "5173:5173"
+    env_file:
+      - ./frontend/.env
+    volumes:
+      - ./frontend:/app
     command: bun dev
 
   db:
