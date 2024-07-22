@@ -10,4 +10,4 @@ COPY . .
 EXPOSE 5173
 
 # Define the command to run the application
-CMD ["bun", "dev"]
+CMD ["bun","run", "dev"]

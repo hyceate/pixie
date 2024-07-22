@@ -5,3 +5,5 @@ backend/pixie_env
 
 .env
 *.local
+
+__pycache__
