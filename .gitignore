@@ -7,3 +7,4 @@ backend/pixie_env
 *.local
 
 __pycache__
+.python-version

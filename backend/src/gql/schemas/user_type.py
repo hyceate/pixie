@@ -8,12 +8,12 @@ user_type_defs = gql(
         posts: [Post!]!
     }
 
-    extend type Query {
+    type Query {
         getUser(id: ID!): User
         getUsers: [User!]!
     }
 
-    extend type Mutation {
+    type Mutation {
         createUser(username: String!): User
     }
     """

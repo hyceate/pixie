@@ -1,4 +1,3 @@
-# gql/resolvers/user_resolvers.py
 from ariadne import QueryType, MutationType
 
 query = QueryType()

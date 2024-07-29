@@ -1,15 +1,18 @@
 services:
-  flask:
+  fastapi:
     build:
       context: ./backend
     ports:
       - "3000:3000"
     env_file:
       - ./backend/.env
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
     depends_on:
       - db
     volumes:
-      - ./backend:/app
+      - ./backend/src:/app/src
+      - ./backend/.env:/app/.env
 
   vue:
     build:
@@ -27,11 +30,28 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: pixie
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    ports:
+      - "80:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
 volumes:
   postgres_data:
+  pgadmin_data:

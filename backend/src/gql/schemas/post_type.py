@@ -11,7 +11,7 @@ post_type_defs = gql(
         updatedAt: String!
     }
 
-    type Query {
+    extend type Query {
         getPost(id: ID!): Post
         getPosts: [Post!]!
     }
@@ -22,11 +22,7 @@ post_type_defs = gql(
         authorId: ID!
     }
 
-    type CreateResponse{
-        success: Boolean!
-        message: String!
-    }
-    type Mutation {
+    extend type Mutation {
         createPost(input: CreateInput!): CreateResponse!
     }
     """

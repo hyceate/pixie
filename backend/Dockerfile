@@ -1,18 +1,29 @@
-# Dockerfile for Flask
+# Use Python 3.10-slim as the base image
 FROM python:3.10-slim
 
+# Set the working directory
 WORKDIR /app
 
-# Copy the virtual environment and requirements file
-COPY ./pixie_env/ ./pixie_env/
+# Copy the requirements file to the container
 COPY requirements.txt .
+# Remove the existing virtual environment if it exists
+RUN rm -rf pixie_env
+# Create a virtual environment using Python's built-in venv
+RUN python -m venv pixie_env
 
+# Install the dependencies into the virtual environment
+RUN pixie_env/bin/pip install -r requirements.txt
 
-# Install the dependencies
-RUN pip install -r requirements.txt
-COPY ./src/ ./src/
+# Copy the application code to the container
+COPY ./src /app/src
 
-ENV FLASK_APP=src/app.py
+# Set environment variables for the virtual environment
+ENV VIRTUAL_ENV=/app/pixie_env
+ENV PATH="/app/pixie_env/bin:$PATH"
+ENV PYTHONPATH=/app/src
+
+# Expose port 3000
 EXPOSE 3000
-CMD ["flask", "run", "--host=0.0.0.0", "--port=3000"]
-# CMD ["python", "src/app.py"]
+
+# Command to run FastAPI with Uvicorn
+CMD ["fastapi", "dev", "src/main.py", "--host", "0.0.0.0", "--port", "3000"]

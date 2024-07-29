@@ -1,10 +1,12 @@
-from db import db
-from datetime import datetime
+from tortoise import fields, models
+from .comment import Comment
+from .images import Images
 
-class Post(db.Model):
-  id = db.Column(db.Integer, primary_key=True)
-  description = db.Column(db.String(255))
-  image_url = db.Column(db.String(255))
-  author_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-  created_at = db.Column(db.DateTime, default=datetime.now)
-  updated_at = db.Column(db.DateTime, default=datetime.now)
+class Post(models.Model):
+    id = fields.IntField(pk=True)
+    description = fields.CharField(max_length=255)
+    images = fields.ReverseRelation['Images']
+    author = fields.ForeignKeyField('models.User', related_name='posts')
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
+    comments = fields.ReverseRelation['Comment']
