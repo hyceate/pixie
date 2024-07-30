@@ -1,5 +1,5 @@
 # Pixie - a wip insta clone
 
-## flask python backend and vue self education project
+## flask python backend and vue self education project, built within docker
 
 ---

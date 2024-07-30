@@ -1,4 +1,5 @@
 backend/pixie_env
+backend/migrations
 /node_modules
 
 .vscode

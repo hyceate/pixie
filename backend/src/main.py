@@ -7,6 +7,7 @@ from .db import init_db, close_db_connections
 from .gql.schema import schema
 import os
 
+
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 schema = schema
 
