@@ -13,6 +13,8 @@ class User(models.Model):
     updated_at = fields.DatetimeField(auto_now=True)
     posts = fields.ReverseRelation['Post']
     comments = fields.ReverseRelation['Comment']
+    github_id = fields.CharField(max_length=255, unique=True, null=True)
+    github_username = fields.CharField(max_length=255, null=True)
 
     def set_password(self, password: str):
         self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')

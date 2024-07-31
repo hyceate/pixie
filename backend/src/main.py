@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from .middlewares.sessions import SessionMiddleware
 from .routes import auth, base
 from ariadne.asgi import GraphQL
 from dotenv import load_dotenv
@@ -29,7 +30,10 @@ app.add_middleware(
     allow_methods=["GET", "POST"],   
     allow_headers=["Authorization", "Content-Type"],
 )
-        
+
+# Add session middleware
+app.add_middleware(SessionMiddleware)
+
 # GraphQL route
 graphql_app = GraphQL(schema, debug=True)
 app.mount("/graphql", graphql_app)
