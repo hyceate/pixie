@@ -1,12 +1,19 @@
-from tortoise import fields, models
-from .comment import Comment
-from .images import Images
+from datetime import datetime
+from sqlalchemy import Column, String, Integer, ForeignKey, DateTime
+from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
+from ..models import Base
 
-class Post(models.Model):
-    id = fields.IntField(pk=True)
-    description = fields.CharField(max_length=255)
-    images = fields.ReverseRelation['Images']
-    author = fields.ForeignKeyField('models.User', related_name='posts')
-    created_at = fields.DatetimeField(auto_now_add=True)
-    updated_at = fields.DatetimeField(auto_now=True)
-    comments = fields.ReverseRelation['Comment']
+class Post(Base):
+    __tablename__ = 'posts'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    description = Column(String(255))
+    created_at = Column(DateTime, default=datetime)
+    updated_at = Column(DateTime, default=datetime, onupdate=datetime)
+    
+    author_id = Column(UUID(as_uuid=True), ForeignKey('users.id'))
+    author = relationship('User', back_populates='posts')
+    
+    comments = relationship('Comment', back_populates='post')
+    images = relationship('Images', back_populates='post')

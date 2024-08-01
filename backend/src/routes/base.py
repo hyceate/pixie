@@ -11,7 +11,6 @@ def read_root():
 async def test_redis():
     try:
         redis_client.set("test_key", "test_value")
-
         value = redis_client.get("test_key")
         
         if value is None:

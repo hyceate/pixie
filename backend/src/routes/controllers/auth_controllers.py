@@ -1,9 +1,11 @@
 from fastapi import Depends, Request, HTTPException
 from fastapi.responses import JSONResponse
-from tortoise.exceptions import ValidationError
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from fastapi.security import OAuth2PasswordBearer
 from ...db import redis_client
+from ...config import SessionLocal
 from ...models import User
 import os
 import uuid
@@ -24,14 +26,19 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-async def create_user(username: str, display_name: str, password: str):
-    if await User.filter(username=username).exists():
-        raise ValidationError("Username already taken")
-    user = User(username=username, display_name=display_name)
-    user.set_password(password)
-    await user.save()
+async def create_user(username: str, display_name: str, password: str, db: Session):
+    user = db.query(User).filter(User.username == username).first()
+    if user:
+        raise HTTPException(status_code=400, detail="Username already taken")
     
-    return user
+    new_user = User(username=username, display_name=display_name)
+    new_user.set_password(password)
+    
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
+    return new_user
 
 def store_token(token_id: str, token: str, expires_in: int, user_id: uuid.UUID):
     user_id_str = str(user_id)
@@ -53,7 +60,7 @@ def get_token_data(token_id: str):
     print("No Token Data Found")
     return None
 
-async def get_current_user(request: Request):
+async def get_current_user(request: Request, db: Session = Depends(SessionLocal)):
     credentials_exception = HTTPException(
         status_code=401,
         detail="Could not validate credentials",
@@ -73,13 +80,13 @@ async def get_current_user(request: Request):
     if not user_id:
         raise credentials_exception
     
-    user = await User.filter(id=user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise credentials_exception
     
     return user
 
-async def login(request: Request):
+async def login(request: Request, db: Session = Depends(SessionLocal)):
     data = await request.json()
     username = data.get('username')
     password = data.get('password')
@@ -87,7 +94,7 @@ async def login(request: Request):
     if not username or not password:
         raise HTTPException(status_code=400, detail="Username and password required")
 
-    user = await User.filter(username=username).first()
+    user = db.query(User).filter(User.username == username).first()
     if not user or not user.check_password(password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 

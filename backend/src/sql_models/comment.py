@@ -1,10 +1,22 @@
-from tortoise import fields, models
+from datetime import datetime
+from sqlalchemy import Column, Integer, Text, ForeignKey, DateTime
+from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
+from ..models import Base
 
-class Comment(models.Model):
-    id = fields.IntField(pk=True)
-    content = fields.TextField()
-    author = fields.ForeignKeyField('models.User', related_name='comments')
-    post = fields.ForeignKeyField('models.Post', related_name='comments')
-    parent = fields.ForeignKeyField('models.Comment', related_name='replies', null=True)
-    created_at = fields.DatetimeField(auto_now_add=True)
-    updated_at = fields.DatetimeField(auto_now=True)
+class Comment(Base):
+    __tablename__ = 'comments'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    content = Column(Text)
+    created_at = Column(DateTime, default=datetime)
+    updated_at = Column(DateTime, default=datetime, onupdate=datetime)
+    
+    author_id = Column(UUID(as_uuid=True), ForeignKey('users.id'))
+    post_id = Column(Integer, ForeignKey('posts.id'))
+    parent_id = Column(Integer, ForeignKey('comments.id'), nullable=True)
+    
+    author = relationship('User', back_populates='comments')
+    post = relationship('Post', back_populates='comments')
+    parent = relationship('Comment', remote_side=[id], back_populates='replies')
+    replies = relationship('Comment', back_populates='parent')

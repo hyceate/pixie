@@ -1,5 +1,7 @@
-backend/pixie_env
-backend/migrations
+migrations
+alembic
+alembic.ini
+
 /node_modules
 
 .vscode
