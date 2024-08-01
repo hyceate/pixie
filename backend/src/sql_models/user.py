@@ -13,8 +13,8 @@ class User(Base):
     username = Column(String(80), unique=True, nullable=False)
     display_name = Column(String(80), unique=True, nullable=False)
     password_hash = Column(String(128), nullable=False)
-    created_at = Column(DateTime, default=datetime)
-    updated_at = Column(DateTime, default=datetime, onupdate=datetime)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     github_id = Column(String(255), unique=True, nullable=True)
     github_username = Column(String(255), nullable=True)
     

@@ -1,12 +1,12 @@
+from datetime import datetime, timedelta
+from aioredis import ResponseError
 from fastapi import Depends, Request, HTTPException
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from fastapi.security import OAuth2PasswordBearer
-from ...db import redis_client
-from ...config import SessionLocal
-from ...models import User
+from ...db import redis_client, get_db
+from ...models import User, Session
 import os
 import uuid
 import json
@@ -49,44 +49,32 @@ def store_token(token_id: str, token: str, expires_in: int, user_id: uuid.UUID):
     token_data_str = json.dumps(token_data)
     redis_client.setex(f"session:{token_id}", expires_in, token_data_str)
 
+def delete_session_from_db(token_id: str, db: Session):
+    session = db.query(Session).filter(Session.token == token_id).first()
+    if session:
+        try:
+            db.delete(session)
+            db.commit()
+        except ResponseError as e:
+            print(f"Error deleting from postgres database: {e}")
+
 def delete_token(token_id: str):
-    redis_client.delete(f"session:{token_id}")
+    key = f"session:{token_id}"
+    try:
+        redis_client.delete(key)
+    except ResponseError as e:
+        print(f"Redis ResponseError while deleting token: {e}")
 
 def get_token_data(token_id: str):
-    token_data_str = redis_client.get(f"session:{token_id}")
-    if token_data_str:
-        print(f"Token Data Retrieved: {token_data_str}")
-        return json.loads(token_data_str)
-    print("No Token Data Found")
-    return None
+    key = f"session:{token_id}"
 
-async def get_current_user(request: Request, db: Session = Depends(SessionLocal)):
-    credentials_exception = HTTPException(
-        status_code=401,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    
-    token = request.cookies.get("ssid")
-    if not token:
-        raise credentials_exception
-    
-    token_data_str = redis_client.get(f"session:{token}")
-    if not token_data_str:
-        raise credentials_exception
+    session_data = redis_client.hgetall(key)
 
-    token_data = json.loads(token_data_str)
-    user_id = token_data.get("user_id")
-    if not user_id:
-        raise credentials_exception
-    
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
-        raise credentials_exception
-    
-    return user
+    if not session_data:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session_data
 
-async def login(request: Request, db: Session = Depends(SessionLocal)):
+async def login(request: Request, db: Session = Depends(get_db)):
     data = await request.json()
     username = data.get('username')
     password = data.get('password')
@@ -101,8 +89,20 @@ async def login(request: Request, db: Session = Depends(SessionLocal)):
     token_id = str(uuid.uuid4())
     access_token = token_id
 
-    store_token(token_id=token_id, token=access_token, expires_in=EXPIRES, user_id=user.id)
+    expires_in = timedelta(seconds=EXPIRES)
+    expires_at = datetime.now() + expires_in
 
+    session_token = Session(token_id=token_id, user_id=user.id, expires_at=expires_at)
+    db.add(session_token)
+    db.commit()
+
+    redis_client.hset(f"session:{access_token}", mapping={
+        "user_id": str(user.id),
+        "expires_at": expires_at.isoformat()
+    })
+    redis_client.expire(f"session:{access_token}", EXPIRES)
+
+    # Create response
     response = JSONResponse(content={"message": "Login successful"})
     response.set_cookie(key="ssid", value=access_token, max_age=EXPIRES, httponly=True, path="/", secure=False, samesite="lax")
 

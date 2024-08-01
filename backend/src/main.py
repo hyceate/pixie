@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .middlewares.sessions import SessionMiddleware
+from .middlewares.session import SessionMiddleware
 from .routes import auth, base
 from ariadne.asgi import GraphQL
 from dotenv import load_dotenv

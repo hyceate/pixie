@@ -1,60 +1,73 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import JSONResponse
-from tortoise.exceptions import ValidationError
+from pydantic import BaseModel
+from uuid import UUID
 from .controllers.auth_controllers import *
 from dotenv import load_dotenv
-from ..models import User
+from ..db import get_db
 
 load_dotenv()
 
 router = APIRouter(prefix="/auth")
 
-@router.post("/register")
-async def register(request: Request):
-    data = await request.json()
-    username = data.get('username')
-    display_name = data.get('display_name')
-    password = data.get('password')
+class UserBase(BaseModel):
+    username: str
+    display_name: str
 
-    if not username or not password:
-        raise HTTPException(status_code=400, detail="Username and password required")
+class UserCreate(UserBase):
+    password:str
 
-    if await User.filter(username=username).first() is not None:
-        raise HTTPException(status_code=400, detail="User already exists")
+class UserResponseModel(BaseModel):
+    id: UUID
+    username: str
+    display_name: str
 
-    try:
-        user = await create_user(username, display_name, password)
-        return {"message": "User created successfully", "user_id": user.id}
-    except ValidationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    class Config:
+        from_attributes = True
+
+@router.post("/register", response_model=UserResponseModel)
+async def register(user: UserCreate, db: Session = Depends(get_db)):
+    new_user = await create_user(user.username, user.display_name, user.password, db)
+    return new_user
     
 @router.post("/login")
-async def login_route(request: Request):
-    response = await login(request)
+async def login_route(request: Request, db: Session = Depends(get_db)):
+    response = await login(request, db)
     return response
 
-
 @router.post("/logout")
-async def logout(request: Request):
+async def logout(request: Request, db: Session = Depends(get_db)):
     token = request.cookies.get("ssid")
-    print("removing cookie", token)
     if not token:
         raise HTTPException(status_code=400, detail="Token missing")
-    
+
+    delete_session_from_db(token_id=token, db=db)
     delete_token(token_id=token)
 
     response = JSONResponse(content={"message": "Logout successful"})
     response.delete_cookie("ssid")
-    return {"message": "Logout successful"}
+    return response
 
 @router.get("/protected")
 async def read_protected_route(request: Request):
-    current_user = await get_current_user(request)
+    current_user = request.state.user
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
     return {"message": f"Hello {current_user.username}, you have access to this protected route."}
 
 @router.get("/get-token")
-def getToken(request:Request):
-    token = request.cookies.get("ssid")
-    tokenData = get_token_data(token_id=token)
+def get_token(request: Request):
+    session_id = request.cookies.get("ssid")
+    if not session_id:
+        raise HTTPException(status_code=400, detail="Session ID missing in cookies")
     
-    return {"message": f"{token}, {tokenData}"}
+    try:
+        session_data = get_token_data(session_id)
+    except HTTPException as e:
+        raise e
+    except redis_client.exceptions.RedisError as e:
+        raise HTTPException(status_code=500, detail="Redis error occurred")
+
+    session_data = {k.decode('utf-8'): v.decode('utf-8') for k, v in session_data.items()}
+    return {"session_data": session_data}

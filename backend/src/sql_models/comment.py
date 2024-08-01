@@ -9,8 +9,8 @@ class Comment(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     content = Column(Text)
-    created_at = Column(DateTime, default=datetime)
-    updated_at = Column(DateTime, default=datetime, onupdate=datetime)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     
     author_id = Column(UUID(as_uuid=True), ForeignKey('users.id'))
     post_id = Column(Integer, ForeignKey('posts.id'))
